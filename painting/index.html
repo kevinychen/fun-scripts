@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta content="text/html; charset=UTF-8" http-equiv="content-type"/>
+        <title>Who painted me?</title>
+        <link href="style.css" rel="stylesheet" type="text/css" />
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+        <script src='https://cdn.firebase.com/v0/firebase.js'></script>
+    </head>
+    <body>
+        <div id="title">
+            <h1>Who painted me?</h1>
+        </div>
+        <div id="story">
+            <p>So we went to Paint Nite and painted some masterpieces, but at the end we all got really drunk and we accidentally threw all our paintings on the ground and they got all mixed up.</p>
+
+            <p>Can you guess whose painting is whose?</p>
+
+            <p>Drag each name to the painting that you think the person drew.
+        </div>
+        <div id="paintings">
+            <img src="images/Picture1.JPG" class="painting">
+            <img src="images/Picture2.JPG" class="painting">
+            <img src="images/Picture3.JPG" class="painting">
+            <img src="images/Picture4.JPG" class="painting">
+            <img src="images/Picture5.JPG" class="painting">
+            <img src="images/Picture6.JPG" class="painting">
+        </div>
+        <div id="labels">
+            <div id="slot1" class="slot_div">
+            </div>
+            <div id="slot2" class="slot_div">
+            </div>
+            <div id="slot3" class="slot_div">
+            </div>
+            <div id="slot4" class="slot_div">
+            </div>
+            <div id="slot5" class="slot_div">
+            </div>
+            <div id="slot6" class="slot_div">
+            </div>
+        </div>
+        <div id="buttons">
+            <div id="button1" class="button_div">
+                <button id="button_eva" draggable="true">Eva Yeung</button>
+            </div>
+            <div id="button2" class="button_div">
+                <button id="button_kevin" draggable="true">Kevin Chen</button>
+            </div>
+            <div id="button3" class="button_div">
+                <button id="button_yishiuan" draggable="true">Yi-Shiuan Tung</button>
+            </div>
+            <div id="button4" class="button_div">
+                <button id="button_becky" draggable="true">Becky Shi</button>
+            </div>
+            <div id="button5" class="button_div">
+                <button id="button_shanthi" draggable="true">Shanthi Ravi</button>
+            </div>
+            <div id="button6" class="button_div">
+                <button id="button_natalle" draggable="true">Natalle Yu</button>
+            </div>
+        </div>
+        <div id="yourname">
+            Your name:<br/>
+            <input id="yournameinput" type="text" /><br/>
+            Best painting / other comments:</br>
+            <textarea id="commentsinput" rows="3" cols="32"></textarea><br/>
+        </div>
+        <div id="submit">
+            <button id="submit_button">SUBMIT</button>
+        </div>
+    </body>
+    <script>
+        dragging = null;
+        var fire = new Firebase('https://kyc.firebaseio.com/painting');
+
+        function getIndex(el) {
+            return el.attr('src').charAt('images/Picture'.length);
+        }
+        function setColor(el) {
+            var index = getIndex(el);
+            var occupant = $('#slot' + index).children()[0];
+            if (occupant) {
+                var color = $(occupant).css('background-color');
+                el.css('border-color', color);
+            } else {
+                el.css('border-color', 'black');
+            }
+        }
+
+        $(document).ready(function() {
+            $('button').on('dragstart', function(e) {
+                dragging = this;
+            });
+            $('img').on('dragover', function(e) {
+                e.preventDefault();
+                var color = $(dragging).css('background-color');
+                $(this).css('border-color', color);
+                return false;
+            });
+            $('img').on('dragleave', function(e) {
+                setColor($(this));
+            });
+            $('img').on('drop', function(e) {
+                var index = getIndex($(this));
+                dragging.remove();
+                var occupant = $('#slot' + index).children()[0];
+                if (occupant) {
+                    for (var i = 1; i <= 6; i++) {
+                        var button = $('#button' + i);
+                        if (!button.children()[0]) {
+                            occupant.remove();
+                            button.append(occupant);
+                            break;
+                        }
+                    }
+                }
+                $('#slot' + index).append(dragging);
+                for (var i = 0; i < 6; i++) {
+                    setColor($('img').eq(i));
+                }
+            });
+            $('#submit_button').on('click', function() {
+                var filled = true;
+                var data = Array(6);
+                for (var i = 0; i < 6; i++) {
+                    var name = $('#slot' + (i + 1)).children().text();
+                    if (!name) {
+                        filled = false;
+                        break;
+                    }
+                    data[i] = name;
+                }
+                if (!filled) {
+                    alert('Please fill in each slot.');
+                    return;
+                }
+                // Fill to firebase
+                var user = $('#yournameinput').val();
+                if (!user) {
+                    alert('Please enter your name.');
+                    return;
+                }
+                var comments = $('#commentsinput').val();
+                fire.push({
+                    'user': user,
+                    'comments': comments,
+                    'painting 1': data[0],
+                    'painting 2': data[1],
+                    'painting 3': data[2],
+                    'painting 4': data[3],
+                    'painting 5': data[4],
+                    'painting 6': data[5],
+                });
+                alert('Submitted!');
+                window.location.href = 'https://www.paintnite.com/pages/events/index/boston#date:1';
+            });
+        });
+    </script>
+</html>
