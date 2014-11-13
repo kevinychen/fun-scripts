@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en" manifest="cache.appcache">
+    <head>
+        <meta content="text/html; charset=UTF-8" http-equiv="content-type"/>
+        <title>Who painted me? Results</title>
+
+        <link href="results.css" rel="stylesheet" type="text/css">
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+        <script src='https://cdn.firebase.com/v0/firebase.js'></script>
+    </head>
+    <body>
+        <div class="container">
+            <div class="game-container">
+                <div class="info">
+                </div>
+
+                <div class="grid-container">
+                    <div class="grid-row">
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                    </div>
+                    <div class="grid-row">
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                    </div>
+                    <div class="grid-row">
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                    </div>
+                    <div class="grid-row">
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                    </div>
+                    <div class="grid-row">
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                    </div>
+                    <div class="grid-row">
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                        <div class="grid-cell"></div>
+                    </div>
+                </div>
+
+                <div class="tile-container">
+                </div>
+
+                <div class="label-container">
+                </div>
+            </div>
+        </div>
+    </body>
+    <script>
+        var paintings = ['painting 1', 'painting 2', 'painting 3',
+        'painting 4', 'painting 5', 'painting 6'];
+        var people = ['Natalle Yu', 'Yi-Shiuan Tung', 'Eva Yeung',
+        'Shanthi Ravi', 'Becky Shi', 'Kevin Chen'];
+        matrix = {};
+
+        var fire = new Firebase('https://kyc.firebaseio.com/painting');
+
+        $(document).ready(function() {
+            var html = '';
+            for (var i = 1; i <= 6; i++) {
+                html += '<div class="label-row-' + i + '">';
+                html += '    <div class="label-inner">' + people[i - 1] + '\'s painting</div>';
+                html += '</div>';
+                html += '<div class="label-col-' + i + '">';
+                html += '    <div class="label-inner">' + people[i - 1] + '</div>';
+                html += '</div>';
+            }
+            $('.label-container').html(html);
+
+            fire.on('value', function(snapshot) {
+                for (var i = 1; i <= 6; i++) {
+                    matrix[i] = {};
+                    for (var j = 1; j <= 6; j++) {
+                        matrix[i][j] = [];
+                    }
+                }
+                var data = snapshot.val();
+                for (var prop in data) {
+                    var vote = data[prop];
+                    for (var i = 1; i <= 6; i++) {
+                        var j = people.indexOf(vote[paintings[i - 1]]) + 1;
+                        matrix[i][j].push(vote['user']);
+                    }
+                }
+
+                var html = '';
+                for (var i = 1; i <= 6; i++) {
+                    for (var j = 1; j <= 6; j++) {
+                        var val = matrix[i][j].length;
+                        if (val == 0) {
+                            continue;
+                        }
+                        if (val >= 12) {
+                            val = 'super';
+                        }
+                        html += '<div class="tile tile-' + val + ' tile-position-' + j + '-' + i + '">';
+                        html += '    <div class="tile-inner">' + val + '</div>';
+                        html += '</div>';
+                    }
+                }
+                $('.tile-container').html(html);
+
+                for (var i = 1; i <= 6; i++) {
+                    for (var j = 1; j <= 6; j++) {
+                        $('.tile-position-' + j + '-' + i).on('mouseover', function() {
+                            var className = $(this)[0].className;
+                            var jj = className.charAt(className.length - 3);
+                            var ii = className.charAt(className.length - 1);
+                            $('.info').text(matrix[ii][jj].join(', ') + ' thought that ' + people[jj - 1] + ' painted ' + people[ii - 1] + '\'s painting.');
+                        });
+                    }
+                }
+            });
+        });
+    </script>
+</html>
+
