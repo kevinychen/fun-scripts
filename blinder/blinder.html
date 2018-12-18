@@ -1,0 +1,100 @@
+<html>
+    <head>
+    </head>
+    <body>
+        <div>
+            Choose a directory containing all files/folders to be blinded:
+            <input id="blinder-input" type="file" name="input" webkitdirectory directory multiple>
+        </div>
+        <div id="progress"></div>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        <script src="https://chancejs.com/chance.min.js"></script>
+        <script src="zip.js"></script>
+        <script src="deflater.js"></script>
+        <script>
+            zip.useWebWorkers = false;
+            $(document).ready(function() {
+                $("#blinder-input").change(e => {
+                    const files = e.target.files;
+                    if (files.length === 0) {
+                        alert("No files selected.");
+                    }
+                    const mapping = {};
+                    const newPaths = [];
+                    let title;
+                    /*
+                     * The directory input tag allows for selecting one directory, so the files will look like
+                     * - rootDir/folder1/blahblah
+                     * - rootDir/folder2/blahblah
+                     * - rootDir/folder3/blahblah
+                     * 
+                     * We create a mapping from the original folders to randomly generated words, e.g.
+                     * - rootDir/bokaroo/blahblah
+                     * - rootDir/minurta/blahblah
+                     * - rootDir/petakis/blahblah
+                     */
+                    for (var i = 0; i < files.length; i++) {
+                        const components = files[i].webkitRelativePath.split("/");
+                        const original = components[1];
+                        if (!(original in mapping)) {
+                            mapping[original] = chance.word({length: 7});
+                            // If the original file has an extension, keep the extension.
+                            if (original.indexOf(".") !== -1) {
+                                mapping[original] += original.substring(original.lastIndexOf("."));
+                            }
+                        }
+                        components[0] += "_blind";
+                        components[1] = mapping[original];
+                        title = components[0];
+                        newPaths.push(components.join("/"));
+                    }
+                    zip.createWriter(new zip.BlobWriter(), function(writer) {
+                        function addFile(i) {
+                            $("#progress").text(`${(100 * i / files.length).toFixed(1)}%`)
+                            if (i < files.length) {
+                                writer.add(newPaths[i], new zip.BlobReader(files[i]), function () {
+                                    addFile(i + 1);
+                                });
+                            } else {
+                                const mappingCsv = ["original,blind"];
+                                function escapeForCsv(str) {
+                                    return "\"" + str.replace("\"", "\"\"") + "\"";
+                                }
+                                for (const original in mapping) {
+                                    mappingCsv.push(`${escapeForCsv(original)},${escapeForCsv(mapping[original])}`);
+                                }
+                                writer.add(`${title}/mapping.csv`, new zip.TextReader(mappingCsv.join("\n")), function() {
+                                    writer.close(function (blob) {
+                                        const originals = Object.keys(mapping).sort();
+                                        const blinds = Object.values(mapping).sort();
+                                        const originalsList = $("<ol>");
+                                        const blindsList = $("<ol>");
+                                        for (var i = 0; i < originals.length; i++) {
+                                            originalsList.append($("<li>", { text: originals[i] }));
+                                            blindsList.append($("<li>", { text: blinds[i] }));
+                                        }
+                                        const downloadLink = $("<a>", {
+                                            "href": URL.createObjectURL(blob),
+                                            "text": "Click here to download again.",
+                                            "download": `${title}.zip`,
+                                        });
+                                        $("#progress")
+                                            .empty()
+                                            .append($("<p>Original values (alphabetized):</p>"))
+                                            .append(originalsList)
+                                            .append($("<p>Blinded values (alphabetized):</p>"))
+                                            .append(blindsList)
+                                            .append($("<span>Blinded files downloaded. </span>"))
+                                            .append(downloadLink);
+                                        downloadLink[0].click();
+                                    });
+                                });
+                            }
+                        }
+                        addFile(0);
+                    });
+                })
+            })
+        </script>
+    </body>
+</html>
